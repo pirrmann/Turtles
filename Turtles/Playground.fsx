@@ -7,16 +7,20 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 open System.Drawing
 
-let host = Window.Create()
+let mutable (host:Window.Host option) = None
+let startHost = async {
+    do! Async.SwitchToNewThread()
+    let h = Window.Create()
+    do host <- Some h
+    do System.Windows.Forms.Application.Run(h.Form)
+}
 
-let handle command =
-    let deleg = new System.Action(fun () -> command |> host.Handler)
-    host.Form.Invoke(deleg) |> ignore
+startHost |> Async.Start
+Async.Sleep 200 |> Async.RunSynchronously
 
-let handleActions = Window.DoActions >> handle
-let reset() = Window.Reset |> handle
-
-host.Form.Show()
+let handleActions =
+    Window.DoActions >> host.Value.Handler
+let reset() = Window.Reset |> host.Value.Handler
 
 open Turtles
 open DSL.French
@@ -100,10 +104,11 @@ let british = turtle {
 
 // leonardo |> handleActions
 // donatello |> handleActions
-// triangle |> handleActions
 // test |> handleActions
 // british |> handleActions
 // french |> handleActions
-// tortue { TOURNE DE 8 CRANS A GAUCHE } |> handleActions
+// tortue { TOURNE DE 6 CRANS A GAUCHE } |> handleActions
+// tortue { AVANCE DE 20 PAS } |> handleActions
 // turtle { PICK THE GREEN PEN } |> handleActions
+
 reset()
