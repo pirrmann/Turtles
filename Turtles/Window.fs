@@ -12,10 +12,6 @@ type Command =
     | Reset
     | DoActions of Turtle
 
-type Host = {
-    Form:Form;
-    Handler:Command->unit }
-
 type State = {
     X: float
     Y: float
@@ -29,34 +25,22 @@ let toSystemColor = function
     | GREEN -> System.Drawing.Color.Green
     | BLUE -> System.Drawing.Color.Blue
 
-type Canvas() =
+type private Canvas() =
     inherit Control()
     do
         base.SetStyle(ControlStyles.UserPaint, true)
         base.SetStyle(ControlStyles.AllPaintingInWmPaint, true)
         base.SetStyle(ControlStyles.OptimizedDoubleBuffer, true)
 
-let Create () =
-    let form = new Form()
-    form.Text <- "Turtle test"
-    form.Width <- 640 + form.Width - form.ClientSize.Width
-    form.Height <- 480 + form.Height - form.ClientSize.Height
-
-    let canvas = new Canvas()
-    canvas.Top <- 0
-    canvas.Left <- 0
-    canvas.BackColor <- Color.White
-    canvas.Dock <- DockStyle.Fill
-
-    form.Controls.Add(canvas)
-
+type Host() as this =
+    inherit Form()
     let state = ref State.Default
-
+    let canvas = new Canvas()
     let drawing = new Bitmap(WIDTH, HEIGHT)
+
     let resetDrawing () =
         use gDraw = Graphics.FromImage(drawing)
         gDraw.Clear(Color.White)
-    resetDrawing()
 
     let repaint (o:obj) (e:PaintEventArgs) =
         let graphics = e.Graphics
@@ -73,14 +57,27 @@ let Create () =
         graphics.RotateTransform(single((!state).Angle))
         graphics.DrawImage(Image.FromFile("resources/turtle.png"), -18, -24, 48, 48)
 
-    canvas.Paint.AddHandler(new PaintEventHandler(repaint))
-    form.Resize.Add(fun _ -> canvas.Invalidate())
+    do
+        this.Text <- "Turtle test"
+        this.Width <- 640 + base.Width - base.ClientSize.Width
+        this.Height <- 480 + base.Height - base.ClientSize.Height
+
+        canvas.Top <- 0
+        canvas.Left <- 0
+        canvas.BackColor <- Color.White
+        canvas.Dock <- DockStyle.Fill
+        this.Controls.Add(canvas)
+
+        canvas.Paint.AddHandler(new PaintEventHandler(repaint))
+        this.Resize.Add(fun _ -> canvas.Invalidate())
+
+        resetDrawing()
 
     let invalidate() =
-        form.Invoke(new System.Action(canvas.Invalidate)) |> ignore
+        this.Invoke(new System.Action(canvas.Invalidate)) |> ignore
         Async.RunSynchronously (Async.Sleep 20)
 
-    let handler command =
+    member this.Handler(command) =
         match command with
         | Reset ->
             resetDrawing ()
@@ -112,4 +109,23 @@ let Create () =
                 | PutPenDown -> state := { !state with PenDown = true }
                 | PickColor color -> state := { !state with Color = color }
 
-    { Form = form; Handler = handler }
+open System.Threading
+open System.Threading.Tasks
+
+let Create () =
+    let started = new TaskCompletionSource<Host>()
+    let thread = new Thread(fun () ->
+        let host = new Host()
+        Application.Idle.Add(fun _ ->
+            if not started.Task.IsCompleted
+            then started.TrySetResult host |> ignore)
+        Application.Run(host))
+
+    thread.SetApartmentState(ApartmentState.STA)
+    thread.Start()
+
+    async {
+        let! host = Async.AwaitTask started.Task
+        do Reset |> host.Handler
+        return host
+    } |> Async.RunSynchronously

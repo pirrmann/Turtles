@@ -7,20 +7,11 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 open System.Drawing
 
-let mutable (host:Window.Host option) = None
-let startHost = async {
-    do! Async.SwitchToNewThread()
-    let h = Window.Create()
-    do host <- Some h
-    do System.Windows.Forms.Application.Run(h.Form)
-}
-
-startHost |> Async.Start
-Async.Sleep 200 |> Async.RunSynchronously
+let host = Window.Create()
 
 let handleActions =
-    Window.DoActions >> host.Value.Handler
-let reset() = Window.Reset |> host.Value.Handler
+    Window.DoActions >> host.Handler
+let reset() = Window.Reset |> host.Handler
 
 open Turtles
 open DSL.French
