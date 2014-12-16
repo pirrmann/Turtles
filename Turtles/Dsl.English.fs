@@ -1,8 +1,11 @@
-﻿namespace DSL
+﻿namespace Turtles.DSL
 
 open Turtles
 
 module English =
+    let STEP = STEPS
+    let GRADATION = GRADATIONS
+
     type AS_word = AS
     type TO_word = TO
     type THE_word = THE

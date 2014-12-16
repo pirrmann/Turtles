@@ -1,5 +1,7 @@
 ﻿module Window
 
+open Runner
+
 open System.Drawing
 open System.Windows.Forms
 
@@ -7,10 +9,6 @@ let WIDTH = 800
 let HEIGHT = 600
 
 open Turtles
-
-type Command =
-    | Reset
-    | DoActions of Turtle
 
 type State = {
     X: float
@@ -36,10 +34,12 @@ type Host() as this =
     inherit Form()
     let state = ref State.Default
     let canvas = new Canvas()
-    let drawing = new Bitmap(WIDTH, HEIGHT)
+
+    let drawingBitmap = new Bitmap(WIDTH, HEIGHT)
+    let mutable readyBitmap:Bitmap = new Bitmap(WIDTH, HEIGHT)
 
     let resetDrawing () =
-        use gDraw = Graphics.FromImage(drawing)
+        use gDraw = Graphics.FromImage(drawingBitmap)
         gDraw.Clear(Color.White)
 
     let repaint (o:obj) (e:PaintEventArgs) =
@@ -49,7 +49,7 @@ type Host() as this =
         graphics.ScaleTransform(single 1, single -1)
 
         let drawingArea = new Rectangle(-WIDTH/2, -HEIGHT/2, WIDTH, HEIGHT)
-        graphics.DrawImage(drawing, -WIDTH/2, -HEIGHT/2)
+        graphics.DrawImage(readyBitmap, -WIDTH/2, -HEIGHT/2)
         graphics.DrawRectangle(Pens.Black, drawingArea)
         graphics.Clip <- new Region(drawingArea)
 
@@ -74,45 +74,44 @@ type Host() as this =
         resetDrawing()
 
     let invalidate() =
+        readyBitmap <- drawingBitmap.Clone() :?> Bitmap
         this.Invoke(new System.Action(canvas.Invalidate)) |> ignore
-        Async.RunSynchronously (Async.Sleep 20)
 
     member this.Handler(command) =
         match command with
-        | Reset ->
+        | UnitCommand.Reset ->
             resetDrawing ()
             state := State.Default
             invalidate()
-        | DoActions actions ->
-            use gDraw = Graphics.FromImage(drawing)
+        | UnitCommand.DoAction action ->
+            use gDraw = Graphics.FromImage(drawingBitmap)
             gDraw.SmoothingMode <- System.Drawing.Drawing2D.SmoothingMode.None
             gDraw.TranslateTransform(single WIDTH / 2.f, single HEIGHT / 2.f)
-            for action in actions do
-                match action with
-                | Walk (n, STEPS) ->
-                    for _ in 1..n do
-                        let x' = (!state).X + 5. * cos ((!state).Angle * System.Math.PI / 180.)
-                        let y' = (!state).Y + 5. * sin ((!state).Angle * System.Math.PI / 180.)
-                        if (!state).PenDown then
-                            let color = (!state).Color |> toSystemColor
-                            use pen = new Pen(color)
-                            gDraw.DrawLine(pen, single (!state).X, single (!state).Y, single x', single y')
-                        state := {!state with X = x'; Y = y'}
-                        invalidate()
-                | Turn (n, GRADATIONS, direction) ->
-                    for _ in 1..n do
-                        let multiplier = match direction with | LEFT -> 1.0 | RIGHT -> -1.0
-                        let angle' = (!state).Angle + multiplier * 15.0
-                        state := {!state with Angle = angle'}
+            match action with
+            | Walk (n, STEPS) ->
+                for _ in 1..n do
+                    let x' = (!state).X + 5. * cos ((!state).Angle * System.Math.PI / 180.)
+                    let y' = (!state).Y + 5. * sin ((!state).Angle * System.Math.PI / 180.)
+                    if (!state).PenDown then
+                        let color = (!state).Color |> toSystemColor
+                        use pen = new Pen(color)
+                        gDraw.DrawLine(pen, single (!state).X, single (!state).Y, single x', single y')
+                    state := {!state with X = x'; Y = y'}
                     invalidate()
-                | LiftPenUp -> state := { !state with PenDown = false }
-                | PutPenDown -> state := { !state with PenDown = true }
-                | PickColor color -> state := { !state with Color = color }
+            | Turn (n, GRADATIONS, direction) ->
+                for _ in 1..n do
+                    let multiplier = match direction with | LEFT -> 1.0 | RIGHT -> -1.0
+                    let angle' = (!state).Angle + multiplier * 15.0
+                    state := {!state with Angle = angle'}
+                invalidate()
+            | LiftPenUp -> state := { !state with PenDown = false }
+            | PutPenDown -> state := { !state with PenDown = true }
+            | PickColor color -> state := { !state with Color = color }
 
 open System.Threading
 open System.Threading.Tasks
 
-let Create () =
+let Create () : UnitCommandHandler =
     let started = new TaskCompletionSource<Host>()
     let thread = new Thread(fun () ->
         let host = new Host()
@@ -126,6 +125,7 @@ let Create () =
 
     async {
         let! host = Async.AwaitTask started.Task
-        do Reset |> host.Handler
-        return host
+        let handler = host.Handler
+        do UnitCommand.Reset |> handler
+        return handler
     } |> Async.RunSynchronously

@@ -1,17 +1,18 @@
 ﻿#load "Turtle.fs"
-#load "Window.fs"
 #load "Dsl.English.fs"
 #load "Dsl.French.fs"
+#load "Text.fs"
+#load "Runner.fs"
+#load "Window.fs"
 
 System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 open System.Drawing
 
-let host = Window.Create()
+let handler = Window.Create() |> Runner.Create
 
-let handleActions =
-    Window.DoActions >> host.Handler
-let reset() = Window.Reset |> host.Handler
+let handleActions = Runner.DoActions >> handler
+let reset() = Runner.Reset |> handler
 
 open Turtles
 open DSL.French
@@ -93,6 +94,7 @@ let british = turtle {
     REPEAT 3 TIMES WHAT leonardo DOES
 }
 
+
 // leonardo |> handleActions
 // donatello |> handleActions
 // test |> handleActions
@@ -102,4 +104,9 @@ let british = turtle {
 // tortue { AVANCE DE 20 PAS } |> handleActions
 // turtle { PICK THE GREEN PEN } |> handleActions
 
-reset()
+open Turtles.Text
+write """
+MR T. SAYS:
+HELLO WORLD""" |> handleActions
+
+//reset()

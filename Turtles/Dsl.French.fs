@@ -1,4 +1,4 @@
-﻿namespace DSL
+﻿namespace Turtles.DSL
 
 open Turtles
 
@@ -6,10 +6,10 @@ module French =
     type Tortue = Turtle
 
     type Unite_De_Distance = PAS with
-        member x.enAnglais = match x with | PAS -> STEP
+        member x.enAnglais = match x with | PAS -> STEPS
 
     type Unite_De_Rotation = | CRANS with
-        member x.enAnglais = match x with | CRANS -> GRADATION
+        member x.enAnglais = match x with | CRANS -> GRADATIONS
     let CRAN = CRANS
 
     type Sens_De_Rotation = | GAUCHE | DROITE with

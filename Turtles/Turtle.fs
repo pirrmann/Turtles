@@ -1,10 +1,8 @@
-﻿module Turtles
+﻿namespace Turtles
 
 type Distance_Unit = STEPS
 type Rotation_Unit = GRADATIONS
 type Rotation_Direction = | LEFT | RIGHT
-let STEP = STEPS
-let GRADATION = GRADATIONS
 
 type Color = | RED | GREEN | BLUE
 
