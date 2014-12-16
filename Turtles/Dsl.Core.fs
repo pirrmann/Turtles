@@ -1,9 +1,8 @@
 ﻿namespace Turtles.DSL
 
 open Turtles
-open Turtles.Text
 
-module English =
+module internal Core =
     let STEP = STEPS
     let DOT = DOTS
     let GRADATION = GRADATIONS
@@ -18,7 +17,7 @@ module English =
     type WHAT_word = WHAT
     type DOES_word = DOES
 
-    type TurtleBuilder() =
+    type CoreBuilder() =
         member x.Yield(()) = Seq.empty
         [<CustomOperation("WALK", MaintainsVariableSpace = true)>]
         member x.Walk(source:Turtle, nb, unit:Distance_Unit) =
@@ -41,8 +40,5 @@ module English =
         [<CustomOperation("REPEAT", MaintainsVariableSpace = true)>]
         member x.Repeat(source:Turtle, nb:int, times_word:TIMES_word, what_word:WHAT_word, turtle:Turtle, does_word:DOES_word) =
             Seq.append source (List.replicate nb turtle |> Seq.collect id)
-        [<CustomOperation("WRITE", MaintainsVariableSpace = true)>]
-        member x.Write(source:Turtle, text:string) =
-            Seq.append source (Text.write text)
 
-    let turtle = new TurtleBuilder()
+    let core = new CoreBuilder()

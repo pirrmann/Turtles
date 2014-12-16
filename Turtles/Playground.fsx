@@ -1,7 +1,7 @@
 ﻿#load "Turtle.fs"
-#load "Dsl.English.fs"
-#load "Dsl.French.fs"
+#load "Dsl.Core.fs"
 #load "Text.fs"
+
 #load "Runner.fs"
 #load "Window.fs"
 
@@ -13,6 +13,9 @@ let handler = Window.Create() |> Runner.Create
 
 let handleActions = Runner.DoActions >> handler
 let reset() = Runner.Reset |> handler
+
+#load "Dsl.English.fs"
+#load "Dsl.French.fs"
 
 open Turtles
 open DSL.French
@@ -104,9 +107,9 @@ let british = turtle {
 // tortue { AVANCE DE 20 PAS } |> handleActions
 // turtle { PICK THE GREEN PEN } |> handleActions
 
-open Turtles.Text
-write """
-MR T. SAYS:
-HELLO WORLD""" |> handleActions
+let writer = turtle {
+    WRITE "MR T. SAYS:\nHELLO WORLD!\n\n"
+}
+writer  |> handleActions
 
 //reset()

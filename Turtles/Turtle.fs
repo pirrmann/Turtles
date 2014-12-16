@@ -1,6 +1,10 @@
 ﻿namespace Turtles
 
-type Distance_Unit = STEPS
+type Distance_Unit = | STEPS | DOTS with
+    member x.ToDots(n:int) =
+        match x with
+        | DOTS -> float n
+        | STEPS -> (float n) * 5.
 type Rotation_Unit = GRADATIONS
 type Rotation_Direction = | LEFT | RIGHT
 

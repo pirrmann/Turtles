@@ -55,9 +55,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Compile Include="Turtle.fs" />
+    <Compile Include="Dsl.Core.fs" />
+    <Compile Include="Text.fs" />
     <Compile Include="Dsl.English.fs" />
     <Compile Include="Dsl.French.fs" />
-    <Compile Include="Text.fs" />
     <Compile Include="Runner.fs" />
     <Compile Include="Window.fs" />
     <Compile Include="Program.fs" />

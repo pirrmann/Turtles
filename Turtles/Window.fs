@@ -88,16 +88,17 @@ type Host() as this =
             gDraw.SmoothingMode <- System.Drawing.Drawing2D.SmoothingMode.None
             gDraw.TranslateTransform(single WIDTH / 2.f, single HEIGHT / 2.f)
             match action with
-            | Walk (n, STEPS) ->
-                for _ in 1..n do
-                    let x' = (!state).X + 5. * cos ((!state).Angle * System.Math.PI / 180.)
-                    let y' = (!state).Y + 5. * sin ((!state).Angle * System.Math.PI / 180.)
-                    if (!state).PenDown then
-                        let color = (!state).Color |> toSystemColor
-                        use pen = new Pen(color)
-                        gDraw.DrawLine(pen, single (!state).X, single (!state).Y, single x', single y')
-                    state := {!state with X = x'; Y = y'}
-                    invalidate()
+            | Walk (n, distanceUnit) ->
+                let dots = distanceUnit.ToDots(n)
+                //for _ in 1 .. dots do
+                let x' = (!state).X + dots * cos ((!state).Angle * System.Math.PI / 180.)
+                let y' = (!state).Y + dots * sin ((!state).Angle * System.Math.PI / 180.)
+                if (!state).PenDown then
+                    let color = (!state).Color |> toSystemColor
+                    use pen = new Pen(color)
+                    gDraw.DrawLine(pen, single (!state).X, single (!state).Y, single x', single y')
+                state := {!state with X = x'; Y = y'}
+                invalidate()
             | Turn (n, GRADATIONS, direction) ->
                 for _ in 1..n do
                     let multiplier = match direction with | LEFT -> 1.0 | RIGHT -> -1.0

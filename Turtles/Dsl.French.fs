@@ -5,8 +5,10 @@ open Turtles
 module French =
     type Tortue = Turtle
 
-    type Unite_De_Distance = PAS with
+    type Unite_De_Distance = | PAS | POINTS with
         member x.enAnglais = match x with | PAS -> STEPS
+                                          | POINTS -> DOTS
+    let POINT = POINTS
 
     type Unite_De_Rotation = | CRANS with
         member x.enAnglais = match x with | CRANS -> GRADATIONS
@@ -57,5 +59,8 @@ module French =
         [<CustomOperation("REPETE", MaintainsVariableSpace = true)>]
         member x.Repete(source:Tortue, nb:int, fois:Mot_FOIS, ce:Mot_CE, que:Mot_QUE, tortue:Tortue, fait:Mot_FAIT) =
             Seq.append source (List.replicate nb tortue |> Seq.collect id)
+        [<CustomOperation("ECRIS", MaintainsVariableSpace = true)>]
+        member x.Ecris(source:Turtle, texte:string) =
+            Seq.append source (Text.write texte)
 
     let tortue = new TortueBuilder()
