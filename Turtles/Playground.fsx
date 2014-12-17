@@ -103,13 +103,16 @@ let british = turtle {
 // test |> handleActions
 // british |> handleActions
 // french |> handleActions
-// tortue { TOURNE DE 6 CRANS A GAUCHE } |> handleActions
-// tortue { AVANCE DE 20 PAS } |> handleActions
-// turtle { PICK THE GREEN PEN } |> handleActions
+
+// [Action.Turn(6, GRADATIONS, LEFT)] |> handleActions
+// [Action.Walk(20, STEPS)] |> handleActions
+// [Action.PickColor(GREEN)] |> handleActions
+// [Action.LiftPenUp] |> handleActions
+// [Action.PutPenDown] |> handleActions
 
 let writer = turtle {
     WRITE "MR T. SAYS:\nHELLO WORLD!\n\n"
 }
-writer  |> handleActions
+writer |> handleActions
 
 //reset()

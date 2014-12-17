@@ -42,6 +42,10 @@ type Host() as this =
         use gDraw = Graphics.FromImage(drawingBitmap)
         gDraw.Clear(Color.White)
 
+    let drawSprite =
+        let sprite = Image.FromFile("resources/turtle.png")
+        fun (g:Graphics) -> g.DrawImage(sprite, -18, -24, 48, 48)
+
     let repaint (o:obj) (e:PaintEventArgs) =
         let graphics = e.Graphics
         graphics.Clear(Color.White)
@@ -55,8 +59,7 @@ type Host() as this =
 
         graphics.TranslateTransform(single (!state).X, single (!state).Y)
         graphics.RotateTransform(single((!state).Angle))
-        graphics.DrawImage(Image.FromFile("resources/turtle.png"), -18, -24, 48, 48)
-
+        drawSprite graphics
     do
         this.Text <- "Turtle test"
         this.Width <- 640 + base.Width - base.ClientSize.Width
@@ -90,9 +93,8 @@ type Host() as this =
             match action with
             | Walk (n, distanceUnit) ->
                 let dots = distanceUnit.ToDots(n)
-                //for _ in 1 .. dots do
-                let x' = (!state).X + dots * cos ((!state).Angle * System.Math.PI / 180.)
-                let y' = (!state).Y + dots * sin ((!state).Angle * System.Math.PI / 180.)
+                let x' = (!state).X + float dots * cos ((!state).Angle * System.Math.PI / 180.)
+                let y' = (!state).Y + float dots * sin ((!state).Angle * System.Math.PI / 180.)
                 if (!state).PenDown then
                     let color = (!state).Color |> toSystemColor
                     use pen = new Pen(color)
