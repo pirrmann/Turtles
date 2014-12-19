@@ -22,6 +22,8 @@ let toSystemColor = function
     | RED -> System.Drawing.Color.Red
     | GREEN -> System.Drawing.Color.Green
     | BLUE -> System.Drawing.Color.Blue
+    | YELLOW -> System.Drawing.Color.Yellow
+    | PINK -> System.Drawing.Color.DeepPink
 
 type private Canvas() =
     inherit Control()

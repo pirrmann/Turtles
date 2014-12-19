@@ -8,7 +8,7 @@ type Distance_Unit = | STEPS | DOTS with
 type Rotation_Unit = GRADATIONS
 type Rotation_Direction = | LEFT | RIGHT
 
-type Color = | RED | GREEN | BLUE
+type Color = | RED | GREEN | BLUE | YELLOW | PINK
 
 type Action =
     | Walk of int * Distance_Unit

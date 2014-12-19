@@ -15,23 +15,56 @@ type UnitCommand =
 
 type UnitCommandHandler = UnitCommand -> unit
 
-let private merge actions =
+let private merge shortenPaths actions =
     if Seq.isEmpty actions then Seq.empty
     else
+        let acc = ref []
+        let penDown = ref None
+
+        let getActionsToYield acc =
+            let rec shorten path =
+                match path with
+                | Walk(w1, u1)
+                  :: Turn(6, GRADATIONS, d1)
+                  :: Walk(w2, u2)
+                  :: Turn(6, GRADATIONS, d2)
+                  :: Walk(w3, u3)
+                  :: tail when d1 = d2 ->
+                        let w = u1.ToDots(w1) - u3.ToDots(w3)
+                        let mapped =
+                            if w > 0 then
+                                Walk(w, DOTS)
+                                  :: Turn(6, GRADATIONS, d1)
+                                  :: Walk(w2, u2)
+                                  :: Turn(6, GRADATIONS, d2)
+                                  :: tail
+                            else
+                                Turn(6, GRADATIONS, d1)
+                                  :: Walk(w2, u2)
+                                  :: Turn(6, GRADATIONS, d2)
+                                  :: Walk(-w, DOTS)
+                                  :: tail
+                        mapped |> shorten
+                | head :: tail -> head :: (tail |> shorten)
+                | [] -> [] 
+
+            if shortenPaths && !penDown = Some(false) then
+                acc |> List.rev |> shorten 
+            else
+                acc |> List.rev       
+
         seq {
-            let acc = ref []
-            let penDown = ref None
             for action in actions do
                 match !acc, action with
                 | _, PutPenDown when !penDown = Some true -> ()
                 | _, LiftPenUp when !penDown = Some false -> ()
                 | _, PutPenDown ->
-                    yield! !acc |> List.rev
+                    yield! !acc |> getActionsToYield
                     acc := []
                     yield PutPenDown
                     penDown := Some true
                 | _, LiftPenUp ->
-                    yield! !acc |> List.rev
+                    yield! !acc |> getActionsToYield
                     acc := []
                     yield LiftPenUp
                     penDown := Some false
@@ -45,7 +78,7 @@ let private merge actions =
                     let newHead = Turn(n, GRADATIONS, d)
                     acc := if newHead.IsNoOp then accTail else newHead :: accTail
                 | _ -> acc := action :: !acc
-            yield! !acc |> List.rev
+            yield! !acc |> getActionsToYield
         }
 
 let private divRem (x:int) (y:int) = System.Math.DivRem(x, y)
@@ -73,6 +106,6 @@ let Create unitCommandHandler =
     function
     | Reset -> UnitCommand.Reset |> unitCommandHandler
     | DoActions actions ->
-        for action in actions |> merge |> split do
+        for action in actions |> merge true |> split do
         action |> UnitCommand.DoAction |> unitCommandHandler
         Async.Sleep 20 |> Async.RunSynchronously

@@ -19,11 +19,13 @@ module French =
                              | GAUCHE -> LEFT
                              | DROITE -> RIGHT
 
-    type Couleur = | ROUGE | VERT | BLEU with
+    type Couleur = | ROUGE | VERT | BLEU | JAUNE | ROSE with
         member x.enAnglais = match x with
                              | ROUGE -> RED
                              | VERT -> GREEN
                              | BLEU -> BLUE
+                             | JAUNE -> YELLOW
+                             | ROSE -> PINK
 
     type Mot_A = A
     type Mot_DE = DE

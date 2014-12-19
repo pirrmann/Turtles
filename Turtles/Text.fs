@@ -651,6 +651,28 @@ module Text =
             WALK 3 STEPS
             TURN 6 GRADATIONS TO THE LEFT }
 
+        let QuestionMark = core {
+            LIFT THE PEN UP
+            WALK 3 STEPS
+            PUT THE PEN DOWN
+            WALK 1 STEP
+            TURN 6 GRADATIONS TO THE RIGHT
+            WALK 2 STEPS
+            TURN 6 GRADATIONS TO THE RIGHT
+            WALK 2 STEPS
+            TURN 6 GRADATIONS TO THE RIGHT
+            WALK 1 STEP
+            TURN 6 GRADATIONS TO THE LEFT
+            WALK 1 STEP
+            LIFT THE PEN UP
+            WALK 4 DOTS
+            PUT THE PEN DOWN
+            WALK 1 DOT
+            LIFT THE PEN UP
+            TURN 6 GRADATIONS TO THE LEFT
+            WALK 2 STEPS
+            TURN 6 GRADATIONS TO THE LEFT }
+
     let private writeChar char =
         match char with
         | 'A' -> Letters.A
@@ -682,6 +704,7 @@ module Text =
         | '.' -> Letters.Point
         | ':' -> Letters.Column
         | '!' -> Letters.ExclamationMark
+        | '?' -> Letters.QuestionMark
         | ' ' | _ -> Letters.Space
 
     let write (text:string) = seq {
