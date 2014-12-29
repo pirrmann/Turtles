@@ -59,7 +59,8 @@
     <Compile Include="Text.fs" />
     <Compile Include="Dsl.English.fs" />
     <Compile Include="Dsl.French.fs" />
-    <Compile Include="Runner.fs" />
+    <Compile Include="Paths.fs" />
+    <Compile Include="Commands.fs" />
     <Compile Include="Window.fs" />
     <Compile Include="Program.fs" />
     <None Include="Playground.fsx" />

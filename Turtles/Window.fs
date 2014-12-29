@@ -1,7 +1,5 @@
 ﻿module Window
 
-open Runner
-
 open System.Drawing
 open System.Windows.Forms
 
@@ -32,9 +30,22 @@ type private Canvas() =
         base.SetStyle(ControlStyles.AllPaintingInWmPaint, true)
         base.SetStyle(ControlStyles.OptimizedDoubleBuffer, true)
 
+[<RequireQualifiedAccess>]
+type private InternalCommand =
+    | Close
+    | Reset
+    | QueueAction of Avatar * Action
+    | DoActions
+
+[<RequireQualifiedAccess>]
+type private WindowCommand =
+    | Close
+    | Reset
+    | DoActions of (Avatar * Action) list
+
 type Host() as this =
     inherit Form()
-    let state = ref State.Default
+    let states = ref Map.empty<Avatar, State>
     let canvas = new Canvas()
 
     let drawingBitmap = new Bitmap(WIDTH, HEIGHT)
@@ -48,6 +59,13 @@ type Host() as this =
         let sprite = Image.FromFile("resources/turtle.png")
         fun (g:Graphics) -> g.DrawImage(sprite, -18, -24, 48, 48)
 
+    let closing = ref false
+
+    let onClosing (o:obj) (e:FormClosingEventArgs) =
+        if not (!closing) then
+            e.Cancel <- true
+            this.Handler.Post Close
+
     let repaint (o:obj) (e:PaintEventArgs) =
         let graphics = e.Graphics
         graphics.Clear(Color.White)
@@ -59,9 +77,12 @@ type Host() as this =
         graphics.DrawRectangle(Pens.Black, drawingArea)
         graphics.Clip <- new Region(drawingArea)
 
-        graphics.TranslateTransform(single (!state).X, single (!state).Y)
-        graphics.RotateTransform(single((!state).Angle))
-        drawSprite graphics
+        let baseTransform = graphics.Transform
+        for avatar, state in !states |> Map.toSeq do
+            graphics.Transform <- baseTransform
+            graphics.TranslateTransform(single state.X, single state.Y)
+            graphics.RotateTransform(single(state.Angle))
+            drawSprite graphics
     do
         this.Text <- "Turtle test"
         this.Width <- 640 + base.Width - base.ClientSize.Width
@@ -74,6 +95,7 @@ type Host() as this =
         this.Controls.Add(canvas)
 
         canvas.Paint.AddHandler(new PaintEventHandler(repaint))
+        this.FormClosing.AddHandler(new FormClosingEventHandler(onClosing))
         this.Resize.Add(fun _ -> canvas.Invalidate())
 
         resetDrawing()
@@ -82,41 +104,94 @@ type Host() as this =
         readyBitmap <- drawingBitmap.Clone() :?> Bitmap
         this.Invoke(new System.Action(canvas.Invalidate)) |> ignore
 
-    member this.Handler(command) =
+    let handler command =
         match command with
-        | UnitCommand.Reset ->
+        | WindowCommand.Close ->
+            closing := true
+            this.Invoke(new System.Action(this.Close)) |> ignore
+        | WindowCommand.Reset ->
             resetDrawing ()
-            state := State.Default
+            states := Map.empty<Avatar, State>
             invalidate()
-        | UnitCommand.DoAction action ->
+        | WindowCommand.DoActions(actions) ->
+            let mustInvalidate = ref false
             use gDraw = Graphics.FromImage(drawingBitmap)
             gDraw.SmoothingMode <- System.Drawing.Drawing2D.SmoothingMode.None
             gDraw.TranslateTransform(single WIDTH / 2.f, single HEIGHT / 2.f)
-            match action with
-            | Walk (n, distanceUnit) ->
-                let dots = distanceUnit.ToDots(n)
-                let x' = (!state).X + float dots * cos ((!state).Angle * System.Math.PI / 180.)
-                let y' = (!state).Y + float dots * sin ((!state).Angle * System.Math.PI / 180.)
-                if (!state).PenDown then
-                    let color = (!state).Color |> toSystemColor
-                    use pen = new Pen(color)
-                    gDraw.DrawLine(pen, single (!state).X, single (!state).Y, single x', single y')
-                state := {!state with X = x'; Y = y'}
-                invalidate()
-            | Turn (n, GRADATIONS, direction) ->
-                for _ in 1..n do
+            for (avatar, action) in actions do
+                let state = defaultArg ((!states).TryFind avatar) (State.Default)
+                match action with
+                | Walk (n, distanceUnit) ->
+                    let dots = distanceUnit.ToDots(n)
+                    let x' = state.X + float dots * cos (state.Angle * System.Math.PI / 180.)
+                    let y' = state.Y + float dots * sin (state.Angle * System.Math.PI / 180.)
+                    if state.PenDown then
+                        let color = state.Color |> toSystemColor
+                        use pen = new Pen(color)
+                        gDraw.DrawLine(pen, single state.X, single state.Y, single x', single y')
+                    states := (!states).Add(avatar, {state with X = x'; Y = y'})
+                    mustInvalidate := true
+                | Turn (n, GRADATIONS, direction) ->
                     let multiplier = match direction with | LEFT -> 1.0 | RIGHT -> -1.0
-                    let angle' = (!state).Angle + multiplier * 15.0
-                    state := {!state with Angle = angle'}
-                invalidate()
-            | LiftPenUp -> state := { !state with PenDown = false }
-            | PutPenDown -> state := { !state with PenDown = true }
-            | PickColor color -> state := { !state with Color = color }
+                    let angle' = state.Angle + float n * multiplier * 15.0
+                    states := (!states).Add(avatar, {state with Angle = angle'})
+                    mustInvalidate := true
+                | LiftPenUp -> states := (!states).Add(avatar, { state with PenDown = false })
+                | PutPenDown -> states := (!states).Add(avatar, { state with PenDown = true })
+                | PickColor color -> states := (!states).Add(avatar, { state with Color = color })
+            if (!mustInvalidate) then invalidate()
+
+    let internalBox =
+        let queuedActions = ref List.empty<Avatar * Action>
+        MailboxProcessor.Start(fun inbox -> 
+            let rec loop () = async { 
+                let! msg = inbox.Receive()
+                match msg with
+                | InternalCommand.Close ->
+                    WindowCommand.Close |> handler
+                    return ()
+                | InternalCommand.Reset ->
+                    WindowCommand.Reset |> handler
+                    return! loop()  
+                | InternalCommand.QueueAction(avatar, action) ->
+                    queuedActions := (avatar, action) :: (!queuedActions)
+                    return! loop()
+                | InternalCommand.DoActions ->
+                    (!queuedActions)
+                        |> List.rev
+                        |> WindowCommand.DoActions
+                        |> handler
+                    queuedActions := List.empty
+                    async {
+                        do! Async.Sleep 20
+                        inbox.Post InternalCommand.DoActions
+                    } |> Async.Start
+                    return! loop() }                   
+            loop())
+
+    let mailbox =
+        internalBox.Post InternalCommand.DoActions
+        MailboxProcessor.Start(fun inbox -> 
+            let rec loop () = async { 
+                let! msg = inbox.Receive()
+                match msg with
+                | Close ->
+                    internalBox.Post InternalCommand.Close
+                    return ()
+                | Reset ->
+                    internalBox.Post InternalCommand.Reset
+                    return! loop()                 
+                | DoAction(avatar, action) ->
+                    internalBox.Post (InternalCommand.QueueAction(avatar, action))
+                    return! loop() }                   
+            loop())
+
+    member this.Handler with get(): MailboxProcessor<Command> = mailbox
 
 open System.Threading
 open System.Threading.Tasks
 
-let Create () : UnitCommandHandler =
+let Create () : MailboxProcessor<Command> =
     let started = new TaskCompletionSource<Host>()
     let thread = new Thread(fun () ->
         let host = new Host()
@@ -131,6 +206,6 @@ let Create () : UnitCommandHandler =
     async {
         let! host = Async.AwaitTask started.Task
         let handler = host.Handler
-        do UnitCommand.Reset |> handler
+        do handler.Post Reset
         return handler
     } |> Async.RunSynchronously
