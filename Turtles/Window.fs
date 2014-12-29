@@ -19,9 +19,11 @@ type State = {
 let toSystemColor = function
     | RED -> System.Drawing.Color.Red
     | GREEN -> System.Drawing.Color.Green
-    | BLUE -> System.Drawing.Color.Blue
+    | BLUE -> System.Drawing.Color.RoyalBlue
     | YELLOW -> System.Drawing.Color.Yellow
     | PINK -> System.Drawing.Color.DeepPink
+    | ORANGE -> System.Drawing.Color.DarkOrange
+    | PURPLE -> System.Drawing.Color.Purple
 
 type private Canvas() =
     inherit Control()
@@ -57,7 +59,22 @@ type Host() as this =
 
     let drawSprite =
         let sprite = Image.FromFile("resources/turtle.png")
-        fun (g:Graphics) -> g.DrawImage(sprite, -18, -24, 48, 48)
+        fun (Avatar(name, color)) (g:Graphics) ->
+            g.DrawImage(sprite, -18, -24, 48, 48)
+            match color with
+            | Some color ->
+                g.ScaleTransform(single 1, single -1)
+                let systemColor = color |> toSystemColor
+                use pen = new Pen(systemColor, 3.f)
+                g.DrawLine(pen, 24, -2, 24, 4)
+                if name.Length > 0 then
+                    use font = new Font(FontFamily.GenericMonospace, 24.f, FontStyle.Bold, GraphicsUnit.Pixel)
+                    use brush = new SolidBrush(systemColor)
+                    let initial = name.Substring(0, 1).ToUpper() 
+                    g.DrawString(initial, font, brush, -8.f, -12.f)
+                g.ScaleTransform(single 1, single -1)
+    
+            | None -> ()
 
     let closing = ref false
 
@@ -82,7 +99,7 @@ type Host() as this =
             graphics.Transform <- baseTransform
             graphics.TranslateTransform(single state.X, single state.Y)
             graphics.RotateTransform(single(state.Angle))
-            drawSprite graphics
+            drawSprite avatar graphics
     do
         this.Text <- "Turtle test"
         this.Width <- 640 + base.Width - base.ClientSize.Width

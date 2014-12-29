@@ -68,7 +68,7 @@ let merge shortenPaths actions =
             yield! !acc |> getActionsToYield
         }
 
-let split dotsPerMove graduationsPerMove actions =
+let split dotsPerMove gradationsPerMove actions =
     let divRem (x:int) (y:int) = System.Math.DivRem(x, y)
     seq {
         for action in actions do
@@ -79,8 +79,8 @@ let split dotsPerMove graduationsPerMove actions =
                     yield Walk(dotsPerMove, DOTS)
                 yield Walk(rem, DOTS)
             | Turn(n, GRADATIONS, d) ->
-                let div, rem = divRem (n % 24) graduationsPerMove
+                let div, rem = divRem (n % 24) gradationsPerMove
                 for i in 1..div do
-                    yield Turn(graduationsPerMove, GRADATIONS, d)
+                    yield Turn(gradationsPerMove, GRADATIONS, d)
                 yield Turn(rem, GRADATIONS, d)
             | _ -> yield action }

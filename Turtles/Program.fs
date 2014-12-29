@@ -53,11 +53,11 @@ let main argv =
         DO AS basePosition
     }
 
-    let center = Avatar.Create("x", host)
-    let top = Avatar.Create("y", host)
-    let bottom = Avatar.Create("z", host)
-    let left = Avatar.Create("l", host)
-    let right = Avatar.Create("r", host)
+    let center = Avatar.Create("_", host)
+    let top = Avatar.Create("leonardo", host, color = BLUE)
+    let bottom = Avatar.Create("raphael", host, color = RED)
+    let left = Avatar.Create("michelangelo", host, color = ORANGE)
+    let right = Avatar.Create("donatello", host, color = PURPLE)
 
     async {
         do center.Post(basePosition)
